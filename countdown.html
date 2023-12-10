@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Timer with Sound</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f7f9; /* Bluish white for background */
+        }
+
+        h1 {
+            color: #4285f4; /* Google Blue for the title */
+        }
+
+        label {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            color: #00acc1; /* Teal for labels */
+        }
+
+        input {
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #00acc1; /* Teal border for inputs */
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #startBtn {
+            background-color: #4caf50; /* Green for Start button */
+            color: #fff; /* White text for Start button */
+        }
+
+        #pauseResumeBtn {
+            background-color: #ffa000; /* Amber for Pause/Resume button */
+            color: #fff; /* White text for Pause/Resume button */
+        }
+
+        #resetBtn {
+            background-color: #f44336; /* Red for Reset button */
+            color: #fff; /* White text for Reset button */
+        }
+
+        #playAudioBtn {
+            background-color: #2196f3; /* Blue for Play Audio button */
+            color: #fff; /* White text for Play Audio button */
+        }
+
+        #stopAudioBtn {
+            background-color: #e57373; /* Light Red for Stop Audio button */
+            color: #fff; /* White text for Stop Audio button */
+        }
+
+        #countdown {
+            font-size: 50vh; /* 50% of viewport height */
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #fff; /* White for Countdown display background */
+            border: 1px solid #ccc; /* Light gray border for Countdown display */
+            border-radius: 5px;
+            color: #333; /* Dark gray text for Countdown display */
+        }
+
+        /* Dark theme styles */
+        body.dark-theme {
+            background-color: #333;
+            color: #fff;
+        }
+
+        body.dark-theme #countdown {
+            background-color: #444;
+            border: 1px solid #666;
+            color: #ddd;
+        }
+
+        body.dark-theme button {
+            background-color: #555;
+            color: #fff;
+        }
+
+        /* Centering styles */
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #timeInputs {
+            display: flex;
+            align-items: center;
+        }
+
+        #timeInputs input {
+            margin-right: 5px;
+        }
+
+        #buttonRow {
+            display: flex;
+            gap: 10px;
+        }
+
+        #themeSelectContainer {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        #themeSelectContainer label {
+            margin-right: 10px;
+        }
+
+        #checklistContainer {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #checklistToggleBtn {
+            margin-top: 10px;
+        }
+
+        #youtubeVideo {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Countdown Timer with Sound</h1>
+
+    <div id="controls">
+        <label for="timeInputs">Time:</label>
+        <div id="timeInputs">
+            <input type="number" id="hours" placeholder="0" min="0" style="width: 60px;">&nbsp;:
+            <input type="number" id="minutes" placeholder="0" min="0" max="59" style="width: 60px;">&nbsp;:
+            <input type="number" id="seconds" placeholder="0" min="0" max="59" style="width: 60px;">
+        </div>
+
+        <button onclick="startCountdown()" id="startBtn">Start Countdown</button>
+        <div id="buttonRow">
+            <button onclick="pauseResumeCountdown()" id="pauseResumeBtn" style="display: none;">Pause</button>
+            <button onclick="resetCountdown()" id="resetBtn" style="display: none;">Reset</button>
+        </div>
+
+        <div id="countdown">00:00:00</div>
+
+        <div id="themeSelectContainer">
+            <label for="themeSelect">Theme:</label>
+            <select id="themeSelect" onchange="changeTheme()">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+            </select>
+        </div>
+
+        <div id="checklistContainer">
+            <label for="loopAudio">Loop Audio:&nbsp;
+                <input type="checkbox" id="loopAudio" checked>
+            </label>
+            <button onclick="toggleChecklist()" id="checklistToggleBtn">Toggle Checklist</button>
+        </div>
+
+        <button onclick="playAudio()" id="playAudioBtn" style="display: none;">Play Audio</button>
+        <button onclick="stopAudio()" id="stopAudioBtn" style="display: none;">Stop Audio</button>
+
+        <audio id="audio" src="./grandfather-clockdown-72643.mp3"></audio>
+
+        <!-- Include the YouTube IFrame API script -->
+        <script src="https://www.youtube.com/iframe_api"></script>
+    </div>
+
+    <script>
+        let countdownInterval;
+        let isPaused = false;
+        let remainingTime;
+        let audioElement = document.getElementById('audio');
+        let loopCheckbox = document.getElementById('loopAudio');
+        let playAudioButton = document.getElementById('playAudioBtn');
+        let stopAudioButton = document.getElementById('stopAudioBtn');
+        let checklistContainer = document.getElementById('checklistContainer');
+
+        // YouTube IFrame API setup
+        let player;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('youtubeVideo', {
+                height: '0',
+                width: '0',
+                videoId: 'yLOM8R6lbzg',  // Replace with your YouTube video ID
+                playerVars: {
+                    controls: 0,
+                    autoplay: 1,
+                    mute: 1,
+                    loop: 1,
+                    playlist: 'yLOM8R6lbzg',  // Same as videoId for loop
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange,
+                },
+            });
+        }
+
+        function onPlayerReady(event) {
+            // You can do something when the player is ready
+        }
+
+        function onPlayerStateChange(event) {
+            // You can handle player state changes here
+        }
+
+        function playYouTubeVideo() {
+            player.playVideo();
+        }
+
+        function pauseYouTubeVideo() {
+            player.pauseVideo();
+        }
+
+        function startCountdown() {
+            const hours = parseInt(document.getElementById('hours').value) || 0;
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+
+            remainingTime = hours * 3600 + minutes * 60 + seconds;
+
+            if (remainingTime > 0) {
+                document.getElementById('pauseResumeBtn').style.display = 'inline-block';
+                document.getElementById('resetBtn').style.display = 'inline-block';
+                document.getElementById('startBtn').style.display = 'none';
+                playAudioButton.style.display = 'none';
+                stopAudioButton.style.display = 'none';
+
+                countdownInterval = setInterval(updateCountdown, 1000);
+            }
+        }
+
+        function updateCountdown() {
+            if (!isPaused) {
+                if (remainingTime > 0) {
+                    remainingTime--;
+
+                    const hours = Math.floor(remainingTime / 3600);
+                    const minutes = Math.floor((remainingTime % 3600) / 60);
+                    const seconds = remainingTime % 60;
+
+                    document.getElementById('countdown').innerText = formatTime(hours) + ':' + formatTime(minutes) + ':' + formatTime(seconds);
+                } else {
+                    document.getElementById('countdown').innerText = '00:00:00';
+                    clearInterval(countdownInterval);
+
+                    playAudio();
+
+                    document.getElementById('pauseResumeBtn').style.display = 'none';
+                    document.getElementById('resetBtn').style.display = 'none';
+                    document.getElementById('startBtn').style.display = 'inline-block';
+                }
+            }
+        }
+
+        function pauseResumeCountdown() {
+            isPaused = !isPaused;
+            document.getElementById('pauseResumeBtn').innerText = isPaused ? 'Resume' : 'Pause';
+        }
+
+        function resetCountdown() {
+            clearInterval(countdownInterval);
+            document.getElementById('countdown').innerText = '00:00:00';
+            document.getElementById('hours').value = '';
+            document.getElementById('minutes').value = '';
+            document.getElementById('seconds').value = '';
+            document.getElementById('pauseResumeBtn').style.display = 'none';
+            document.getElementById('resetBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'inline-block';
+            stopAudio();
+            pauseYouTubeVideo();
+        }
+
+        function formatTime(time) {
+            return time < 10 ? '0' + time : time;
+        }
+
+        function playAudio() {
+            audioElement.loop = loopCheckbox.checked;
+            audioElement.play();
+            playAudioButton.style.display = 'none';
+            stopAudioButton.style.display = 'inline-block';
+            playYouTubeVideo();  // Play YouTube video
+        }
+
+        function stopAudio() {
+            audioElement.pause();
+            audioElement.currentTime = 0;
+            playAudioButton.style.display = 'inline-block';
+            stopAudioButton.style.display = 'none';
+            pauseYouTubeVideo();  // Pause YouTube video
+        }
+
+        function changeTheme() {
+            const themeSelect = document.getElementById('themeSelect');
+            const body = document.body;
+
+            if (themeSelect.value === 'dark') {
+                body.classList.add('dark-theme');
+            } else {
+                body.classList.remove('dark-theme');
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('dark-theme');
+        }
+
+        function toggleChecklist() {
+            checklistContainer.style.display = checklistContainer.style.display === 'none' ? 'flex' : 'none';
+        }
+    </script>
+</body>
+</html>
